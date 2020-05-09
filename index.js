@@ -77,9 +77,9 @@ const getYeeLights = new Promise((resolve, reject) => {
 });
 
 const changeLightColor = (id, color) => {
-    const parsedColor = color.toLowerCase();
-    const convertedColor = parseInt(colors[parsedColor]);
-    if(isNaN(convertedColor)) return;
+    
+    const convertedColor = processColor(color);
+    
     foundDevices[id].device.sendCommand({
         id: parseInt(id),
         method: 'set_rgb',
@@ -88,9 +88,8 @@ const changeLightColor = (id, color) => {
 }
 
 const flashColor = (id, color, loopCount = 4) => {
-    const parsedColor = color.toLowerCase();
-    const convertedColor = parseInt(colors[parsedColor]);
-    if(isNaN(convertedColor)) return;
+
+    const convertedColor = processColor(color);
 
     foundDevices[id].device.sendCommand({
         id: parseInt(id),
@@ -100,4 +99,21 @@ const flashColor = (id, color, loopCount = 4) => {
             250, 1, ${convertedColor}, 1
         `] // time(ms), mode(1 for color, 7 sleep), value, brightness
     })
+}
+
+const processColor = (color) => {
+    let convertedColor = 0;
+
+    if(color.charAt(0) === '#') {
+        const colorNum = parseInt(color.substr(1), 16);
+        if(colorNum >= 0 && colorNum <= 16777215) {
+            convertedColor = colorNum;
+        }  
+    } else {
+        const parsedColor = color.toLowerCase();
+        if(isNaN(parseInt(colors[parsedColor]))) return;
+        convertedColor = parseInt(colors[parsedColor]);
+    }
+
+    return convertedColor;
 }
