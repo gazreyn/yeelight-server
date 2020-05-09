@@ -36,35 +36,37 @@ discoveryService.listen();
 wss.on('connection', (ws) => {
   ws.on('message', (message) => {
       const data = JSON.parse(message);
-    switch(data.event) {
-        case 'getLights':
-            console.log("Getting YeeLight devices");
-            getYeeLights.then(devices => {
-                let tmpObject = {}
+        switch(data.event) {
+            case 'getLights':
+                console.log("Getting YeeLight devices");
+                getYeeLights.then(devices => {
+                    let tmpObject = {}
 
-                const deviceKeys = Object.keys(devices);
-                const deviceKeysLength = deviceKeys.length;
+                    const deviceKeys = Object.keys(devices);
+                    const deviceKeysLength = deviceKeys.length;
 
-                for(let i = 0; i < deviceKeysLength; i++) {
-                    tmpObject[deviceKeys[i]] = {
-                        "model": devices[deviceKeys[i]].model
+                    for(let i = 0; i < deviceKeysLength; i++) {
+                        tmpObject[deviceKeys[i]] = {
+                            "model": devices[deviceKeys[i]].model
+                        }
                     }
-                }
-                ws.send(JSON.stringify(tmpObject));
-            });
-            break;
-        case 'toggleLight':
-            toggleYeeLight(data.data.id);
-            break;
-        case 'changeLightColor':
-            data.data.devices.forEach(device => {
-                changeLightColor(device, data.data.color);
-            });
-            break;
-        default:
-            console.log("Unknown message");
-            break;
-    }
+                    ws.send(JSON.stringify(tmpObject));
+                });
+                break;
+            case 'changeLightColor':
+                data.data.devices.forEach(device => {
+                    changeLightColor(device, data.data.color);
+                });
+                break;
+            case 'flashLights':           
+                data.data.devices.forEach(device => {
+                    flashColor(device, data.data.color, data.data.loopCount);
+                });
+                break;
+            default:
+                console.log("Unknown message");
+                break;
+        }
   });
 });
 
@@ -82,5 +84,20 @@ const changeLightColor = (id, color) => {
         id: parseInt(id),
         method: 'set_rgb',
         params: [convertedColor, "smooth", 500],
+    })
+}
+
+const flashColor = (id, color, loopCount = 4) => {
+    const parsedColor = color.toLowerCase();
+    const convertedColor = parseInt(colors[parsedColor]);
+    if(isNaN(convertedColor)) return;
+
+    foundDevices[id].device.sendCommand({
+        id: parseInt(id),
+        method: 'start_cf',
+        params: [loopCount*2, 0, `
+            250, 1, ${convertedColor}, 100, 
+            250, 1, ${convertedColor}, 1
+        `] // time(ms), mode(1 for color, 7 sleep), value, brightness
     })
 }
